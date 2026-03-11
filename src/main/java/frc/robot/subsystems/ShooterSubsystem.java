@@ -1,58 +1,129 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Inches;
+import static edu.wpi.first.units.Units.Pounds;
 import static edu.wpi.first.units.Units.RPM;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
 
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
-import com.ctre.phoenix6.signals.MotorAlignmentValue;
 
-import edu.wpi.first.math.controller.BangBangController;
+import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.units.AngularVelocityUnit;
-import edu.wpi.first.units.Unit;
-import edu.wpi.first.units.Units;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.LinearVelocity;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.Constants;
+import java.util.function.Supplier;
+import yams.gearing.GearBox;
+import yams.gearing.MechanismGearing;
+import yams.mechanisms.config.FlyWheelConfig;
+import yams.mechanisms.velocity.FlyWheel;
+import yams.motorcontrollers.SmartMotorController;
+import yams.motorcontrollers.SmartMotorControllerConfig;
+import yams.motorcontrollers.SmartMotorControllerConfig.ControlMode;
+import yams.motorcontrollers.SmartMotorControllerConfig.MotorMode;
+import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
+import yams.motorcontrollers.remote.TalonFXWrapper;
 
-public class ShooterSubsystem extends SubsystemBase {
+public class ShooterSubsystem extends SubsystemBase
+{
 
-    TalonFX shooter = new TalonFX(12);
-    TalonFX follower = new TalonFX(15);
+  private final TalonFX                    shooterMotor         = new TalonFX(12);
+  private final TalonFX                    feeder         = new TalonFX(15);
+  private final boolean                    feederInverted = true;
+  private final SmartMotorControllerConfig motorConfig            = new SmartMotorControllerConfig(this)
+      .withFollowers(Pair.of(feeder, feederInverted))
+      .withControlMode(ControlMode.CLOSED_LOOP)
+      .withClosedLoopController(0, 0, 0)
+      .withFeedforward(new SimpleMotorFeedforward(0.11965, 0.3422, 0.0))
+      .withTelemetry("ShooterMotor", TelemetryVerbosity.HIGH)
+      .withGearing(new MechanismGearing(GearBox.fromReductionStages(1)))
+      .withMotorInverted(false)
+      .withIdleMode(MotorMode.COAST)
+      .withStatorCurrentLimit(Amps.of(40));
 
-    private final Slot0Configs shooterRPSControl = new Slot0Configs();
+  private final SmartMotorController       motor                  = new TalonFXWrapper(shooterMotor,
+                                                                                    DCMotor.getKrakenX60(2),
+                                                                                    motorConfig);
+  private final FlyWheelConfig             shooterConfig          = new FlyWheelConfig(motor)
+      // Diameter of the flywheel.
+      .withDiameter(Inches.of(4))
+      // Mass of the flywheel.
+      .withMass(Pounds.of(3.54))
+      .withUpperSoftLimit(RPM.of(6065))
+      .withLowerSoftLimit(RPM.of(0))
+      .withTelemetry("ShooterMech", TelemetryVerbosity.HIGH);
+  private final FlyWheel                   shooter                = new FlyWheel(shooterConfig);
 
-    private final VelocityVoltage valVolt;
+  public ShooterSubsystem() {}
 
-    BangBangController controller = new BangBangController();
-    SimpleMotorFeedforward feedforward = new SimpleMotorFeedforward(0, Constants.ShooterConstants.shooterKV);
-    
+  /**
+   * Gets the current velocity of the shooter.
+   *
+   * @return FlyWheel velocity.
+   */
+  public AngularVelocity getVelocity() {return shooter.getSpeed();}
 
-    public ShooterSubsystem() {
-        follower.setControl(new Follower(12, MotorAlignmentValue.Opposed));
+  /**
+   * Set the shooter velocity.
+   *
+   * @param speed Speed to set.
+   * @return {@link edu.wpi.first.wpilibj2.command.RunCommand}
+   */
+  public Command setVelocity(AngularVelocity speed) {return shooter.setSpeed(speed);}
 
-    shooterRPSControl.withKV(0.11965);
-    shooterRPSControl.withKS(0.3422);
-    shooterRPSControl.withKP(0);
+  /**
+   * Set the dutycycle of the shooter.
+   *
+   * @param dutyCycle DutyCycle to set.
+   * @return {@link edu.wpi.first.wpilibj2.command.RunCommand}
+   */
+  public Command set(double dutyCycle) {return shooter.set(dutyCycle);}
 
-    shooter.getConfigurator().apply(shooterRPSControl);
-    follower.getConfigurator().apply(shooterRPSControl);
 
-    valVolt = new VelocityVoltage(0);
-    }
+  public Command setDutyCycle(Supplier<Double> dutyCycle) {return shooter.set(dutyCycle);}
 
-    public void runVelocity(double rpm) {
+  public Command setVelocity(Supplier<AngularVelocity> speed) {return shooter.run(speed);}
 
-        // Controls a motor with the output of the BangBang controller and a feedforward
-        // Shrinks the feedforward slightly to avoid overspeeding the shooter
-                // Shooter.setVoltage(controller.calculate(Shooter.getVelocity().getValue().in(Units.RPM), rpm) * 12.0 + 0.9 * (rpm / 60 * Constants.ShooterConstants.shooterKV));
-   shooter.setControl(valVolt.withVelocity(RPM.of(rpm)));
-            }
+  @Override
+  public void simulationPeriodic()
+  {
+    shooter.simIterate();
+  }
 
-    public double getVelocity(){
-        return shooter.getVelocity().getValue().in(Units.RPM);
-    }
+  public Command sysId() {
+    return shooter.sysId(Volts.of(12), Volts.of(3).per(Second), Seconds.of(7));
+  }
+
+  @Override
+  public void periodic()
+  {
+    shooter.updateTelemetry();
+  }
+
+  public void setRPM(LinearVelocity newHorizontalSpeed)
+  {
+    shooter.setMeasurementVelocitySetpoint(newHorizontalSpeed);
+  }
+
+  public boolean readyToShoot(AngularVelocity tolerance)
+  {
+    if (motor.getMechanismSetpointVelocity().isEmpty())
+    {return false;}
+    return motor.getMechanismVelocity().isNear(motor.getMechanismSetpointVelocity().orElseThrow(), tolerance);
+  }
+
+  public void setVelocitySetpoint(AngularVelocity speed)
+  {
+    shooter.setMechanismVelocitySetpoint(speed);
+  }
+
+  public void setDutyCycleSetpoint(double dutyCycle)
+  {
+    shooter.setDutyCycleSetpoint(dutyCycle);
+  }
 }

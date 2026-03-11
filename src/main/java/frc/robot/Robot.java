@@ -12,6 +12,7 @@ import java.lang.ModuleLayer.Controller;
 import com.ctre.phoenix6.HootAutoReplay;
 import com.ctre.phoenix6.hardware.TalonFX;
 
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.PS4Controller.Axis;
@@ -21,7 +22,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.subsystems.ShooterSubsystem;
+import frc.robot.subsystems.ProtoShooterSubsystem;
+import frc.robot.commands.LimeLightHelpers;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -35,7 +37,7 @@ public class Robot extends TimedRobot {
 
     TalonFX Feeder = new TalonFX(8); // Other Names Jumper,Feeder,Accerlator
 
-    ShooterSubsystem shooter = new ShooterSubsystem();
+    ProtoShooterSubsystem shooter = new ProtoShooterSubsystem();
 
     TalonFX Turntable = new TalonFX(10);
 
@@ -66,7 +68,12 @@ public class Robot extends TimedRobot {
         fieldPose.setRobotPose(m_robotContainer.drivetrain.getState().Pose);
         SmartDashboard.putData("Robot Pose", fieldPose);
         CommandScheduler.getInstance().run();
+        double omegaRps = Units.degreesToRotations(m_robotContainer.m_robotDrive.getTurnRste());
+        var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiRed(limelightName:"9600");
 
+        if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
+            m_robotContainer.m_robotDrive.resetOdometry(llMeasurement);
+        }
     }
 
     @Override
@@ -99,6 +106,28 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
         SmartDashboard.putNumber("Target RPM", targetRPM);
+
+    //     public void indicateLimelight(Indicate mode) {
+    // Boolean b = (Math.floor(unitimer.get() * 10) % 2) == 1;
+    // switch (mode) {
+    //   case DISABLED:
+    //     for (String limelight : Constants.Limelight.limelights) {
+    //       LimelightHelpers.setLEDMode_ForceOff(limelight);
+    //     }
+    //     break;
+    //   case ENABLED:
+    //     for (String limelight : Constants.Limelight.limelights) {
+    //       LimelightHelpers.setLEDMode_ForceOn(limelight);
+    //     }
+    //     break;
+    //   case AUTO:
+    //     for (String limelight : Constants.Limelight.limelights) {
+    //       LimelightHelpers.setLEDMode_ForceBlink(limelight);
+    //     }
+    //     break;
+//     }
+//   }
+  
     }
 
     @Override
