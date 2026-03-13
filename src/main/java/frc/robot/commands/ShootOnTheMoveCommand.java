@@ -81,16 +81,21 @@ public class ShootOnTheMoveCommand extends Command
     launchFlywheelSpeedMap.put(151.0, 2800.0);
 
     // TODO You likely need to measure this
-    timeOfFlightMap.put(5.68, 1.16);
-    timeOfFlightMap.put(4.55, 1.12);
-    timeOfFlightMap.put(3.15, 1.11);
-    timeOfFlightMap.put(1.88, 1.09);
-    timeOfFlightMap.put(1.38, 0.90);
+    timeOfFlightMap.put(223.62, 1.16);
+    timeOfFlightMap.put(179.13, 1.12);
+    timeOfFlightMap.put(124.02, 1.11);
+    timeOfFlightMap.put(74.02, 1.09);
+    timeOfFlightMap.put(54.33, 0.90);
   }
 
   public ShootOnTheMoveCommand(TurretSubsystem turret, ShooterSubsystem shooter, HopperSubsystem hopper,
                                CommandSwerveDrivetrain swerveDrive)
   {
+    this.turret = turret;
+    this.shooterSubsystem = shooter;
+    this.hopper = hopper;
+
+  
     SmartDashboard.putData("ShootOnTheMoveField", debugField);
     estimatedPose = () -> {
       // Calculate estimated pose while accounting for phase delay
@@ -160,10 +165,12 @@ public class ShootOnTheMoveCommand extends Command
     if (lastTurretAngle == null) {lastTurretAngle = turretAngle;}
     lastTurretAngle = turretAngle;
     var lookaheadTurretToTargetDistanceMeasure = Meters.of(lookaheadTurretToTargetDistance);
+    SmartDashboard.putNumber("Distancetogoal", lookaheadTurretToTargetDistanceMeasure.in(Inches));
     if (lookaheadTurretToTargetDistanceMeasure.gte(minDistance) &&
         lookaheadTurretToTargetDistanceMeasure.lte(maxDistance))
     {
       var shooterRPM = isInAllianceZone(robotPose) ? RPM.of(launchFlywheelSpeedMap.get(lookaheadTurretToTargetDistance)) : RPM.of(passRpm(lookaheadTurretToTargetDistanceMeasure.in(Inches)));
+      SmartDashboard.putNumber("rpm",shooterRPM.in(RPM));
       turret.setAngleSetpoint(turretAngle.getMeasure());
       shooterSubsystem.setVelocitySetpoint(shooterRPM);
       if (shootingDebounce.calculate(shooterSubsystem.getVelocity().isNear(shooterRPM, RPM.of(10)))) // If you have problems with this you increase this by 10 rpms each time until it shoots like you want. If you start creeping above 100, then you might want to look at something else as the problem.

@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Degree;
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.Rotation;
 import static edu.wpi.first.units.Units.Rotations;
 
@@ -19,6 +21,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.PS4Controller.Axis;
 import edu.wpi.first.wpilibj.motorcontrol.Talon;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.FieldObject2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -51,8 +54,10 @@ public class Robot extends TimedRobot {
 
     private double targetRPM = 0;
 
-    private final RobotContainer m_robotContainer;
-    private final Field2d fieldPose;
+    private double turretAngle = 0;
+
+    private final RobotContainer m_robotContainer  = new RobotContainer();;
+    private Field2d fieldPose = new Field2d();
 
     /* log and replay timestamp and joystick data */
     private final HootAutoReplay m_timeAndJoystickReplay = new HootAutoReplay()
@@ -60,28 +65,33 @@ public class Robot extends TimedRobot {
         .withJoystickReplay();
 
     public Robot() {
-        m_robotContainer = new RobotContainer();
-        fieldPose = new Field2d();
+        SmartDashboard.putData("robotpose", fieldPose);
     }
 
     @Override
     public void robotPeriodic() {
+        fieldPose.setRobotPose(m_robotContainer.drivetrain.getState().Pose);
+        SmartDashboard.putData(fieldPose);
+
+        SmartDashboard.putNumber("turretPOS", m_robotContainer.turret.getAngle().in(Degree));
+
         SwerveDriveState driveState = m_robotContainer.drivetrain.getState();
 
         m_timeAndJoystickReplay.update();
-        fieldPose.setRobotPose(driveState.Pose);
+        // fieldPose.setRobotPose(llMeasurement.pose);
         SmartDashboard.putData("Robot Pose", fieldPose);
         CommandScheduler.getInstance().run();
 
         double headingDeg = driveState.Pose.getRotation().getDegrees();
         double omegaRps = Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
         // var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue(limelightName:"9600");
-        var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight"); //what is our limelight's name? is it 9600?
+        var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-xflare"); //Our limelight's name is 9600
 
         if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
+            // fieldPose.setRobotPose(llMeasurement.pose);
             m_robotContainer.drivetrain.addVisionMeasurement(llMeasurement.pose, llMeasurement.timestampSeconds);
         }
-        LimeLightHelpers.SetRobotOrientation("limelight", headingDeg, 0, 0, 0, 0, 0);
+        LimeLightHelpers.SetRobotOrientation("limelight-xflare", headingDeg, 0, 0, 0, 0, 0);
     }
 
     @Override
@@ -114,6 +124,7 @@ public class Robot extends TimedRobot {
             CommandScheduler.getInstance().cancel(m_autonomousCommand);
         }
         SmartDashboard.putNumber("Target RPM", targetRPM);
+        SmartDashboard.putNumber("turret angle", turretAngle);
 
     //     public void indicateLimelight(Indicate mode) {
     // Boolean b = (Math.floor(unitimer.get() * 10) % 2) == 1;
@@ -142,40 +153,44 @@ public class Robot extends TimedRobot {
     public void teleopPeriodic() {
         SmartDashboard.putNumber("Intake Arm", arm.getPosition().getValue().in(Rotations));
         SmartDashboard.putNumber("TurnTable", Turntable.getPosition().getValue().in(Rotations));
-        targetRPM = SmartDashboard.getNumber("Target RPM", targetRPM);
+        // targetRPM = SmartDashboard.getNumber("Target RPM", targetRPM);
+        // turretAngle = SmartDashboard.getNumber("turret angle", turretAngle);
         SmartDashboard.putNumber("Shooter RPM", shooter.getVelocity());
 
-        if (controller.getRawButton(3)) {
+        // if (controller.getRawButton(1)) {
+        //     m_robotContainer.turret.setAngleSetpoint(Degrees.of(turretAngle));
+        // }
+        // if (controller.getRawButton(3)) {
             // intake.set(-75);
-            arm.setVoltage(-3);
-        }
-        else if(controller.getRawAxis(3) > .25) {
-            arm.setPosition(0);
-        }
-        else if (controller.getRawButton(4)) {
-            intake.set(-1);
-        }
-        else if (controller.getRawButton(7)) {
-            intake.set(-1);
-            arm.setVoltage(3);
-        }
-        else if (controller.getRawButton(6)) {
-            Hoopper.setVoltage(-10);
-            Feeder.setVoltage(10);
-        }
-        else if (controller.getRawButton(5)) {
-            shooter.runVelocity(targetRPM);
-        }
-        else if (controller.getRawButton(8)) {
-            shooter.runVelocity(0);
-        }
-        else {
-            intake.set(0);
-            arm.setVoltage(0);
-            Hoopper.setVoltage(0);
-            Feeder.setVoltage(0);
-            Turntable.setVoltage(0);
-        }
+        //     arm.setVoltage(-3);
+        // }
+        // else if(controller.getRawAxis(3) > .25) {
+        //     arm.setPosition(0);
+        // }
+        // else if (controller.getRawButton(4)) {
+        //     intake.set(-1);
+        // }
+        // else if (controller.getRawButton(7)) {
+        //     intake.set(-1);
+        //     arm.setVoltage(3);
+        // }
+        // else if (controller.getRawButton(6)) {
+        //     Hoopper.setVoltage(-10);
+        //     Feeder.setVoltage(10);
+        // }
+        // else if (controller.getRawButton(5)) {
+        //     shooter.runVelocity(targetRPM);
+        // }
+        // else if (controller.getRawButton(8)) {
+        //     shooter.runVelocity(0);
+        // }
+        // else {
+        //     intake.set(0);
+        //     arm.setVoltage(0);
+        //     Hoopper.setVoltage(0);
+        //     Feeder.setVoltage(0);
+        //     Turntable.setVoltage(0);
+        // }
         // if (controller2.getRawButton(3)) {
         //     if (Turntable.getPosition().getValue().in(Rotations) > -5) {
         //         Turntable.setVoltage(-1);
