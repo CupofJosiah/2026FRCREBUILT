@@ -37,7 +37,7 @@ public class HopperSubsystem extends SubsystemBase {
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(4))) // 4:1 gear reduction
       .withMotorInverted(true)
       .withIdleMode(MotorMode.BRAKE)
-      .withStatorCurrentLimit(Amps.of(40));
+      .withStatorCurrentLimit(Amps.of(35));
 
   private SmartMotorController smc = new TalonFXWrapper(hopperMotor, DCMotor.getKrakenX60(1), smcConfig);
 
@@ -56,7 +56,7 @@ public class HopperSubsystem extends SubsystemBase {
       .withGearing(new MechanismGearing(GearBox.fromReductionStages(4))) // 4:1 gear reduction
       .withMotorInverted(false)
       .withIdleMode(MotorMode.BRAKE)
-      .withStatorCurrentLimit(Amps.of(20));
+      .withStatorCurrentLimit(Amps.of(25));
 
   private SmartMotorController smcFeeder = new TalonFXWrapper(feederMotor, DCMotor.getKrakenX60(1), smcFeederConfig);
 
@@ -93,7 +93,7 @@ public class HopperSubsystem extends SubsystemBase {
   }
 
   public Command backFeedCommand() {
-    return hopper.set(-HOPPER_SPEED).alongWith(feeder.set(-FEEDER_SPEED)).finallyDo(() -> {smc.setDutyCycle(0); smcFeeder.setDutyCycle(0);}).withName("Hopper.BackFeed");
+    return hopper.set(-HOPPER_SPEED)/*.alongWith(feeder.set(-FEEDER_SPEED))*/.finallyDo(() -> {smc.setDutyCycle(0); smcFeeder.setDutyCycle(0);}).withName("Hopper.BackFeed");
   }
 
   /**

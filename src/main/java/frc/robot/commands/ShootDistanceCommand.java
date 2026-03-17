@@ -42,7 +42,7 @@ import yams.mechanisms.swerve.SwerveDrive;
  * Adapted from 6328 Mechanical Advantage!
  * Original source is here: https://github.com/Mechanical-Advantage/RobotCode2026Public/blob/alpha-bot-turret/src/main/java/org/littletonrobotics/frc2026/subsystems/launcher/LaunchCalculator.java
  */
-public class ShootOnTheMoveCommand extends Command
+public class ShootDistanceCommand extends Command
 {
 
   private final double     loopPeriodSecs = Milliseconds.of(20).in(Seconds);
@@ -73,21 +73,19 @@ public class ShootOnTheMoveCommand extends Command
   {
     // These should be found on your robot
     //                         Inches |  RPMS 
-    launchFlywheelSpeedMap.put(184.0, 3100.0 + 50);
-    launchFlywheelSpeedMap.put(173.0, 3000.0 + 50);
-    launchFlywheelSpeedMap.put(131.5, 2700.0 + 50);
-    launchFlywheelSpeedMap.put(111.0, 2650.0 + 50);
-    launchFlywheelSpeedMap.put(104.0, 2600.0 + 50);
-    launchFlywheelSpeedMap.put(104.0, 2600.0 + 50);
-    launchFlywheelSpeedMap.put(104.0, 2600.0 + 50);
-    launchFlywheelSpeedMap.put(105.0, 2600.0 + 50);
-    launchFlywheelSpeedMap.put(122.0, 2680.0 + 50);
-    launchFlywheelSpeedMap.put(161.0, 2900.0 + 50);
-    launchFlywheelSpeedMap.put(142.0, 2760.0 + 50);
-    launchFlywheelSpeedMap.put(158.5, 2840.0 + 50);
-    launchFlywheelSpeedMap.put(192.0, 3150.0 + 50);
-    launchFlywheelSpeedMap.put(162.0, 2930.0 + 50);
-    launchFlywheelSpeedMap.put(151.0, 2800.0 + 50);
+    launchFlywheelSpeedMap.put(184.0, 3100.0);
+    launchFlywheelSpeedMap.put(173.0, 3000.0);
+    launchFlywheelSpeedMap.put(131.5, 2700.0);
+    launchFlywheelSpeedMap.put(111.0, 2650.0);
+    launchFlywheelSpeedMap.put(104.0, 2600.0);
+    launchFlywheelSpeedMap.put(105.0, 2600.0);
+    launchFlywheelSpeedMap.put(122.0, 2680.0);
+    launchFlywheelSpeedMap.put(161.0, 2900.0);
+    launchFlywheelSpeedMap.put(142.0, 2760.0);
+    launchFlywheelSpeedMap.put(158.5, 2840.0);
+    launchFlywheelSpeedMap.put(192.0, 3150.0);
+    launchFlywheelSpeedMap.put(162.0, 2930.0);
+    launchFlywheelSpeedMap.put(151.0, 2800.0);
 
     // TODO You likely need to measure this
     //                  Inches    | Seconds in the air
@@ -98,7 +96,7 @@ public class ShootOnTheMoveCommand extends Command
     timeOfFlightMap.put(54.33,  0.90);
   }
 
-  public ShootOnTheMoveCommand(TurretSubsystem turret, ShooterSubsystem shooter, HopperSubsystem hopper,
+  public ShootDistanceCommand(TurretSubsystem turret, ShooterSubsystem shooter, HopperSubsystem hopper,
                                CommandSwerveDrivetrain swerveDrive)
   {
     this.turret = turret;
@@ -110,18 +108,18 @@ public class ShootOnTheMoveCommand extends Command
     estimatedPose = () -> {
       // Calculate estimated pose while accounting for phase delay
       SwerveDriveState driveState = swerveDrive.getState();
-      ChassisSpeeds robotRelativeVelocity = driveState.Speeds;
+      // ChassisSpeeds robotRelativeVelocity = driveState.Speeds;
       var           robotPose             = driveState.Pose;
-      robotPose = robotPose.exp(
-          new Twist2d(
-              robotRelativeVelocity.vxMetersPerSecond * phaseDelay,
-              robotRelativeVelocity.vyMetersPerSecond * phaseDelay,
-              robotRelativeVelocity.omegaRadiansPerSecond * phaseDelay));
+      // robotPose = robotPose.exp(
+      //     new Twist2d(
+      //         robotRelativeVelocity.vxMetersPerSecond * phaseDelay,
+      //         robotRelativeVelocity.vyMetersPerSecond * phaseDelay,
+      //         robotRelativeVelocity.omegaRadiansPerSecond * phaseDelay));
       // Optional, add logging here
       debugField.setRobotPose(robotPose);
       return robotPose;
     };
-    _fieldRelativeVelocity = swerveDrive::getFieldRelativeSpeed;
+    // _fieldRelativeVelocity = swerveDrive::getFieldRelativeSpeed;
 
     addRequirements(turret, shooter, hopper);
 
@@ -140,55 +138,51 @@ public class ShootOnTheMoveCommand extends Command
   {
     // Get estimated pose
     var robotPose             = estimatedPose.get();
-    var fieldRelativeVelocity = _fieldRelativeVelocity.get();
+    // var fieldRelativeVelocity = _fieldRelativeVelocity.get();
     Distance  minDistance      = inAllianceZone ? Inches.of(104) : Meters.of(0.75);
     Distance  maxDistance      = inAllianceZone ? Inches.of(192) : Inches.of(500);
 
     // Calculate distance from turret to target
-    Translation2d target = inAllianceZone ?
-        AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d()) :
-        onOutpostSide ?
-        AllianceFlipUtil.apply(FieldConstants.Outpost.aimPoint) :
-        AllianceFlipUtil.apply(FieldConstants.Depot.aimPoint);
+    Translation2d target = AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d());
     Pose2d turretPosition         = turret.getPose(robotPose);
     double turretToTargetDistance = target.getDistance(turretPosition.getTranslation());
 
     // Calculate field relative turret velocity
     Angle         robotAngle     = robotPose.getRotation().getMeasure();
-    ChassisSpeeds turretVelocity = turret.getVelocity(fieldRelativeVelocity, robotAngle);
+    // ChassisSpeeds turretVelocity = turret.getVelocity(fieldRelativeVelocity, robotAngle);
 
     // Account for imparted velocity by robot (turret) to offset
     double timeOfFlight;
     Pose2d lookaheadPose                   = turretPosition;
-    double lookaheadTurretToTargetDistance = turretToTargetDistance;
-    for (int i = 0; i < 3; i++)
-    {
-      timeOfFlight = timeOfFlightMap.get(Meters.of(lookaheadTurretToTargetDistance).in(Inches));
-      double offsetX = turretVelocity.vxMetersPerSecond * timeOfFlight;
-      double offsetY = turretVelocity.vyMetersPerSecond * timeOfFlight;
-      lookaheadPose =
-          new Pose2d(
-              turretPosition.getTranslation().plus(new Translation2d(offsetX, offsetY)),
-              turretPosition.getRotation());
-      lookaheadTurretToTargetDistance = target.getDistance(lookaheadPose.getTranslation());
-    }
+    // double lookaheadTurretToTargetDistance = turretToTargetDistance;
+    // for (int i = 0; i < 3; i++)
+    // {
+      // timeOfFlight = timeOfFlightMap.get(Meters.of(lookaheadTurretToTargetDistance).in(Inches));
+    //   double offsetX = turretVelocity.vxMetersPerSecond * timeOfFlight;
+    //   double offsetY = turretVelocity.vyMetersPerSecond * timeOfFlight;
+    //   lookaheadPose =
+    //       new Pose2d(
+    //           turretPosition.getTranslation().plus(new Translation2d(offsetX, offsetY)),
+    //           turretPosition.getRotation());
+    //   lookaheadTurretToTargetDistance = target.getDistance(lookaheadPose.getTranslation());
+    // }
 
     // Calculate parameters accounted for imparted velocity
     // turretAngle = target.minus(lookaheadPose.getTranslation()).getAngle();
-    Rotation2d fieldangletotarget = target.minus(lookaheadPose.getTranslation()).getAngle();
-    Rotation2d robotrelativeturretangle = fieldangletotarget.minus(robotPose.getRotation());
-    turretAngle =Rotation2d.fromRadians(MathUtil.angleModulus(robotrelativeturretangle.getRadians()));
-    SmartDashboard.putNumber("Turret Angle", turretAngle.getDegrees());
-    if (lastTurretAngle == null) {lastTurretAngle = turretAngle;}
-    lastTurretAngle = turretAngle;
-    var lookaheadTurretToTargetDistanceMeasure = Meters.of(lookaheadTurretToTargetDistance);
+    // Rotation2d fieldangletotarget = target.minus(lookaheadPose.getTranslation()).getAngle();
+    // Rotation2d robotrelativeturretangle = fieldangletotarget.minus(robotPose.getRotation());
+    // turretAngle =Rotation2d.fromRadians(MathUtil.angleModulus(robotrelativeturretangle.getRadians()));
+    // SmartDashboard.putNumber("Turret Angle", turretAngle.getDegrees());
+    // if (lastTurretAngle == null) {lastTurretAngle = turretAngle;}
+    // lastTurretAngle = turretAngle;
+    var lookaheadTurretToTargetDistanceMeasure = Meters.of(turretToTargetDistance);
     SmartDashboard.putNumber("Distancetogoal", lookaheadTurretToTargetDistanceMeasure.in(Inches));
     if (lookaheadTurretToTargetDistanceMeasure.gte(minDistance) &&
         lookaheadTurretToTargetDistanceMeasure.lte(maxDistance))
     {
-      var shooterRPM = inAllianceZone ? RPM.of(launchFlywheelSpeedMap.get(lookaheadTurretToTargetDistance)) : RPM.of(passRpm(lookaheadTurretToTargetDistanceMeasure.in(Inches)));
+      var shooterRPM = inAllianceZone ? RPM.of(launchFlywheelSpeedMap.get(turretToTargetDistance)) : RPM.of(passRpm(lookaheadTurretToTargetDistanceMeasure.in(Inches)));
       SmartDashboard.putNumber("rpm",shooterRPM.in(RPM));
-      turret.setAngleSetpoint(turretAngle.getMeasure());
+      // turret.setAngleSetpoint(turretAngle.getMeasure());
       shooterSubsystem.setVelocitySetpoint(shooterRPM);
       if (shootingDebounce.calculate(shooterSubsystem.getVelocity().isNear(shooterRPM, RPM.of(200)))) // If you have problems with this you increase this by 10 rpms each time until it shoots like you want. If you start creeping above 100, then you might want to look at something else as the problem.
       {

@@ -85,7 +85,7 @@ public class Robot extends TimedRobot {
         double headingDeg = driveState.Pose.getRotation().getDegrees();
         double omegaRps = Units.radiansToRotations(driveState.Speeds.omegaRadiansPerSecond);
         // var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue(limelightName:"9600");
-        var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-xflare"); //Our limelight's name is 9600
+        var llMeasurement = LimeLightHelpers.getBotPoseEstimate_wpiBlue("limelight-xflare"); //Our limelight's name is 9600
 
         if (llMeasurement != null && llMeasurement.tagCount > 0 && Math.abs(omegaRps) < 2.0) {
             // fieldPose.setRobotPose(llMeasurement.pose);
@@ -160,29 +160,45 @@ public class Robot extends TimedRobot {
 
         if (controller.getRawButton(6)) {
             intake.set(1);
-            arm.setVoltage(24);
+            arm.set(.25);
         }
         else if (controller.getRawAxis(3) > .4) {
             intake.set(1);
-            arm.setVoltage(-24);
+            arm.set(-.25);;
         }
+        // else if (controller.getRawButton(5)) { //
+        //     shooter.runVelocity(-2680); //
+        // }           
+        // else if (controller.getRawButton(2)) { //
+        //     Feeder.set(1); //
+        //     Hoopper.set(1); //
+        // } //
         else if (controller.getRawAxis(2) > .4) {
             intake.set(1);
         }
         else if (controller.getRawButton(1)) {
             intake.set(1);
         }
+        
         else {
             intake.set(0);
             arm.setVoltage(0);
+            
+            // shooter.runVelocity(0); //
+            //  Feeder.set(0); //
+            // Hoopper.set(0); //
         }
 
-        // if (controller.getRawButton(4)) {
-        //     shooter.runVelocity(-2680);
+        // if (controller.getRawButton(6)) {
+        //     intake.set(1);
+        //     arm.setVoltage(35);
         // }
-        // else if (!controller.getRawButton(4) || !controller.getRawButton(5)) {
-        //     shooter.runVelocity(0;)
+        // else if (controller.getRawAxis(3) > .4) {
+        //     intake.set(1);
+        //     arm.setVoltage(-35);
         // }
+
+        
 
 
         

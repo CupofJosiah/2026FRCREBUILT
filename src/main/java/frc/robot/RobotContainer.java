@@ -22,7 +22,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import frc.robot.commands.ShootOnTheMoveCommand;
+import frc.robot.commands.ShootDistanceCommand;
+import frc.robot.commands.ShootOnTheMoveCommandOLD;
 import frc.robot.commands.Telemetry;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
@@ -58,7 +59,10 @@ public class RobotContainer {
 
     public IntakeSubsystem intake = new IntakeSubsystem();
 
-    private ShootOnTheMoveCommand shootCommand = new ShootOnTheMoveCommand(turret, shooter, hopper, drivetrain);
+    private ShootOnTheMoveCommandOLD shootCommand = new ShootOnTheMoveCommandOLD(turret, shooter, hopper, drivetrain);
+
+    private ShootOnTheMoveCommandOLD shootNoTurretCommand = new ShootOnTheMoveCommandOLD(turret, shooter, hopper, drivetrain);
+
 
     // private IntakeSubsystem deployAndRollCommand = new deployAndRollCommand();
 
@@ -84,7 +88,15 @@ public class RobotContainer {
 
     private void configureBindings() {
 
-        joystick.leftBumper().whileTrue(shootCommand);
+        joystick.b().whileTrue(shootCommand);
+
+        // joystick.b().whileTrue(shootNoTurretCommand);
+
+        // joystick.x().whileTrue(ShooterSubsystem.setVelocitySetpoint(2000));
+
+        joystick.x().whileTrue(intake.backFeedAndRollCommand());
+
+        joystick.y().whileTrue(hopper.backFeedCommand());
 
         //if your going to add the intake command then please disable the simple code in robot.java
 

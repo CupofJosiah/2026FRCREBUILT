@@ -64,7 +64,7 @@ private static final double ACCEL_DEG_PER_SEC_SQ = 2440.0;
       .withGearing(new MechanismGearing(30.0))
       .withIdleMode(MotorMode.COAST)
       .withTelemetry("TurretMotor", TelemetryVerbosity.HIGH)
-      .withStatorCurrentLimit(Amps.of(40))
+      .withStatorCurrentLimit(Amps.of(25))
       .withMotorInverted(true)
       .withClosedLoopRampRate(Seconds.of(0.1))
       .withOpenLoopRampRate(Seconds.of(0.1))

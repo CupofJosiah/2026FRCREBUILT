@@ -78,7 +78,7 @@ private SmartMotorController smc =
       .withMotorInverted(false)
       .withIdleMode(MotorMode.COAST)
       .withSoftLimit(Degrees.of(0), Degrees.of(150))
-      .withStatorCurrentLimit(Amps.of(10))
+      .withStatorCurrentLimit(Amps.of(40))
       .withClosedLoopRampRate(Seconds.of(0.1))
       .withOpenLoopRampRate(Seconds.of(0.1));
 
@@ -139,11 +139,11 @@ private SmartMotorController smc =
 
   public Command backFeedAndRollCommand() {
     return Commands.run(() -> { //outtake run all though un used
-      setIntakeDeployed();
+      // setIntakeDeployed();
       smc.setDutyCycle(-INTAKE_SPEED);
     }, this).finallyDo(() -> {
       smc.setDutyCycle(0);
-      setIntakeHold();
+      // setIntakeHold();
     }).withName("Intake.BackFeedAndRoll");
   }
 

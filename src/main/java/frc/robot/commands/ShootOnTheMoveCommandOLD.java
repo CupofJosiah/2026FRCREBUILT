@@ -32,9 +32,6 @@ import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.ShooterSubsystem;
 import frc.robot.subsystems.TurretSubsystem;
 import java.util.function.Supplier;
-
-import com.ctre.phoenix6.swerve.SwerveDrivetrain.SwerveDriveState;
-
 import yams.mechanisms.swerve.SwerveDrive;
 
 
@@ -42,7 +39,7 @@ import yams.mechanisms.swerve.SwerveDrive;
  * Adapted from 6328 Mechanical Advantage!
  * Original source is here: https://github.com/Mechanical-Advantage/RobotCode2026Public/blob/alpha-bot-turret/src/main/java/org/littletonrobotics/frc2026/subsystems/launcher/LaunchCalculator.java
  */
-public class ShootOnTheMoveCommand extends Command
+public class ShootOnTheMoveCommandOLD extends Command
 {
 
   private final double     loopPeriodSecs = Milliseconds.of(20).in(Seconds);
@@ -61,8 +58,6 @@ public class ShootOnTheMoveCommand extends Command
       new InterpolatingDoubleTreeMap();
   private static final InterpolatingDoubleTreeMap               timeOfFlightMap        =
       new InterpolatingDoubleTreeMap();
-  private boolean inAllianceZone = true;
-  private boolean onOutpostSide = true;
 
   // Tuning Constants
   private final Debouncer shootingDebounce = new Debouncer(0.1, DebounceType.kFalling);
@@ -98,7 +93,7 @@ public class ShootOnTheMoveCommand extends Command
     timeOfFlightMap.put(54.33,  0.90);
   }
 
-  public ShootOnTheMoveCommand(TurretSubsystem turret, ShooterSubsystem shooter, HopperSubsystem hopper,
+  public ShootOnTheMoveCommandOLD(TurretSubsystem turret, ShooterSubsystem shooter, HopperSubsystem hopper,
                                CommandSwerveDrivetrain swerveDrive)
   {
     this.turret = turret;
@@ -109,9 +104,8 @@ public class ShootOnTheMoveCommand extends Command
     SmartDashboard.putData("ShootOnTheMoveField", debugField);
     estimatedPose = () -> {
       // Calculate estimated pose while accounting for phase delay
-      SwerveDriveState driveState = swerveDrive.getState();
-      ChassisSpeeds robotRelativeVelocity = driveState.Speeds;
-      var           robotPose             = driveState.Pose;
+      ChassisSpeeds robotRelativeVelocity = swerveDrive.getState().Speeds;
+      var           robotPose             = swerveDrive.getState().Pose;
       robotPose = robotPose.exp(
           new Twist2d(
               robotRelativeVelocity.vxMetersPerSecond * phaseDelay,
@@ -130,9 +124,7 @@ public class ShootOnTheMoveCommand extends Command
   @Override
   public void initialize()
   {
-    var robotPose             = estimatedPose.get();
-    inAllianceZone = isInAllianceZone(robotPose);
-    onOutpostSide = isOnAllianceOutpostSide(robotPose);
+
   }
 
   @Override
@@ -141,13 +133,13 @@ public class ShootOnTheMoveCommand extends Command
     // Get estimated pose
     var robotPose             = estimatedPose.get();
     var fieldRelativeVelocity = _fieldRelativeVelocity.get();
-    Distance  minDistance      = inAllianceZone ? Inches.of(104) : Meters.of(0.75);
-    Distance  maxDistance      = inAllianceZone ? Inches.of(192) : Inches.of(500);
+    Distance  minDistance      = isInAllianceZone(robotPose) ? Inches.of(104) : Meters.of(0.75);
+    Distance  maxDistance      = isInAllianceZone(robotPose) ? Inches.of(192) : Inches.of(500);
 
     // Calculate distance from turret to target
-    Translation2d target = inAllianceZone ?
+    Translation2d target = isInAllianceZone(robotPose) ?
         AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d()) :
-        onOutpostSide ?
+        isOnAllianceOutpostSide(robotPose) ?
         AllianceFlipUtil.apply(FieldConstants.Outpost.aimPoint) :
         AllianceFlipUtil.apply(FieldConstants.Depot.aimPoint);
     Pose2d turretPosition         = turret.getPose(robotPose);
@@ -161,7 +153,7 @@ public class ShootOnTheMoveCommand extends Command
     double timeOfFlight;
     Pose2d lookaheadPose                   = turretPosition;
     double lookaheadTurretToTargetDistance = turretToTargetDistance;
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 20; i++)
     {
       timeOfFlight = timeOfFlightMap.get(Meters.of(lookaheadTurretToTargetDistance).in(Inches));
       double offsetX = turretVelocity.vxMetersPerSecond * timeOfFlight;
@@ -186,7 +178,7 @@ public class ShootOnTheMoveCommand extends Command
     if (lookaheadTurretToTargetDistanceMeasure.gte(minDistance) &&
         lookaheadTurretToTargetDistanceMeasure.lte(maxDistance))
     {
-      var shooterRPM = inAllianceZone ? RPM.of(launchFlywheelSpeedMap.get(lookaheadTurretToTargetDistance)) : RPM.of(passRpm(lookaheadTurretToTargetDistanceMeasure.in(Inches)));
+      var shooterRPM = isInAllianceZone(robotPose) ? RPM.of(launchFlywheelSpeedMap.get(lookaheadTurretToTargetDistance)) : RPM.of(passRpm(lookaheadTurretToTargetDistanceMeasure.in(Inches)));
       SmartDashboard.putNumber("rpm",shooterRPM.in(RPM));
       turret.setAngleSetpoint(turretAngle.getMeasure());
       shooterSubsystem.setVelocitySetpoint(shooterRPM);
