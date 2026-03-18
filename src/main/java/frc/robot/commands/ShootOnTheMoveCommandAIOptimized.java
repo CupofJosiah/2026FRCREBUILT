@@ -33,7 +33,7 @@ public class ShootOnTheMoveCommandAIOptimized extends Command {
   private static final double PHASE_DELAY_SECS = 0.05;
 
   private static final double ALLIANCE_MIN_DISTANCE_M = Units.inchesToMeters(104.0);
-  private static final double ALLIANCE_MAX_DISTANCE_M = Units.inchesToMeters(192.0);
+  private static final double ALLIANCE_MAX_DISTANCE_M = Units.inchesToMeters(241.0);
   private static final double PASS_MIN_DISTANCE_M = 0.75;
   private static final double PASS_MAX_DISTANCE_M = Units.inchesToMeters(500.0);
 
@@ -55,6 +55,7 @@ public class ShootOnTheMoveCommandAIOptimized extends Command {
     launchFlywheelSpeedMap.put(192.0, 3150.0);
     launchFlywheelSpeedMap.put(162.0, 2930.0);
     launchFlywheelSpeedMap.put(151.0, 2800.0);
+    launchFlywheelSpeedMap.put(241.0, 3522.0); //calculated - replace with measured pair ASAP
 
     // Inches -> seconds
     timeOfFlightMap.put(223.62, 1.16);
@@ -159,6 +160,48 @@ public class ShootOnTheMoveCommandAIOptimized extends Command {
       return;
     }
 
+    // Uncomment this after you test performance
+    double absTurretDeg = Math.abs(turretAngle.getDegrees());
+    if (absTurretDeg > turret.MAX_ONE_DIR_FOV ) {
+      if( !inAllianceZone ) {
+        hopper.stop();
+        shooterSubsystem.setDutyCycleSetpoint(0);
+        return;
+      }
+
+      // Translation2d nearestHubCorner =
+      //     turretAngle.getDegrees() > 0
+      //         ? AllianceFlipUtil.apply(FieldConstants.Hub.rightFace.getTranslation())
+      //         : AllianceFlipUtil.apply(FieldConstants.Hub.leftFace.getTranslation());
+
+      // double dxHub = targetX - turretX;
+      // double dyHub = targetY - turretY;
+      // double dxCorner = nearestHubCorner.getX() - turretX;
+      // double dyCorner = nearestHubCorner.getY() - turretY;
+
+      // double hubDistSq = dxHub * dxHub + dyHub * dyHub;
+      // double cornerDistSq = dxCorner * dxCorner + dyCorner * dyCorner;
+
+      // // Protect against divide-by-zero if the turret is somehow on top of one of the points
+      // if (hubDistSq > 1e-9 && cornerDistSq > 1e-9) {
+      //   double halfHubWidth = FieldConstants.Hub.width * 0.5;
+      //   double halfHubWidthSq = halfHubWidth * halfHubWidth;
+
+      //   double cosAllowedExtraAngle =
+      //       (hubDistSq + cornerDistSq - halfHubWidthSq)
+      //           / (2.0 * Math.sqrt(hubDistSq * cornerDistSq));
+
+      //   double excessFovDeg = absTurretDeg - turret.MAX_ONE_DIR_FOV;
+      //   double cosExcessFov = Math.cos(Math.toRadians(excessFovDeg));
+
+      //   // angleDeg < excessFovDeg  <=>  cos(angleDeg) > cos(excessFov)
+      //   if (cosAllowedExtraAngle > cosExcessFov) {
+          hopper.stop();
+          return;
+      //   }
+      // }
+    }
+
     // IMPORTANT: launch map is keyed in inches, not meters
     double distanceInches = Units.metersToInches(distanceM);
     double shooterRpmValue =
@@ -181,8 +224,6 @@ public class ShootOnTheMoveCommandAIOptimized extends Command {
 
     if (atSpeed) {
       hopper.feed();
-    } else {
-      hopper.stop();
     }
   }
 
@@ -205,6 +246,36 @@ public class ShootOnTheMoveCommandAIOptimized extends Command {
 
   public double passRpm(double distanceInches) {
     return 7.538 * distanceInches + 1705.0;
+  }
+
+  /**
+   * Returns the angle between sideA and sideB in radians.
+   *
+   * @param sideA one adjacent side
+   * @param sideB the other adjacent side
+   * @param oppositeSide the side opposite the angle
+   * @return angle in radians
+   */
+  public static double angleRadians(double sideA, double sideB, double oppositeSide) {
+      if (sideA <= 0 || sideB <= 0 || oppositeSide <= 0) {
+          throw new IllegalArgumentException("All side lengths must be positive.");
+      }
+
+      double denominator = 2.0 * sideA * sideB;
+      double cosTheta =
+              (sideA * sideA + sideB * sideB - oppositeSide * oppositeSide) / denominator;
+
+      // Clamp to protect against tiny floating-point errors
+      cosTheta = Math.max(-1.0, Math.min(1.0, cosTheta));
+
+      return Math.acos(cosTheta);
+  }
+
+  /**
+   * Returns the angle between sideA and sideB in degrees.
+   */
+  public static double angleDegrees(double sideA, double sideB, double oppositeSide) {
+      return Math.toDegrees(angleRadians(sideA, sideB, oppositeSide));
   }
 
   @Override
